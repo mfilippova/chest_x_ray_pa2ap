@@ -60,16 +60,16 @@ def get_cycle_consistency_loss(real_X, fake_Y, gen_YX, cycle_criterion):
     return cycle_loss, cycle_X
 
 
-def get_gen_loss(real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y, adv_criterion, identity_criterion, cycle_criterion, lambda_identity=0.1, lambda_cycle=10):
+def get_gen_loss(real_A, real_B, gen_AB, gen_BA, disc_A, disc_B, adv_criterion, identity_criterion, cycle_criterion, lambda_identity=0.1, lambda_cycle=10, use_identity=False):
     '''
     Total loss for the Generator
     Parameters:
-        real_X: the real images from pile X
-        real_Y: the real images from pile Y
-        gen_XY: the generator for class X to Y
-        gen_YX: the generator for class Y to X
-        disc_X: the discriminator for class X
-        disc_Y: the discriminator for class Y
+        real_A: the real images from pile A
+        real_B: the real images from pile B
+        gen_AB: the generator for class A to B
+        gen_BA: the generator for class B to A
+        disc_A: the discriminator for class A
+        disc_B: the discriminator for class B
         adv_criterion: the adversarial loss function
         identity_criterion: the reconstruction loss function used for identity loss
             and cycle consistency loss; returns pixel difference of two images
@@ -77,17 +77,21 @@ def get_gen_loss(real_X, real_Y, gen_XY, gen_YX, disc_X, disc_Y, adv_criterion, 
         lambda_identity: the weight of the identity loss
         lambda_cycle: the weight of the cycle-consistency loss
     '''
-    adv_loss_YX, fake_X = get_gen_adversarial_loss(real_Y, disc_X, gen_YX, adv_criterion)
-    adv_loss_XY, fake_Y = get_gen_adversarial_loss(real_X, disc_Y, gen_XY, adv_criterion)
-    gen_adversarial_loss = adv_loss_YX + adv_loss_XY
+    adv_loss_AB, fake_B = get_gen_adversarial_loss(real_A, disc_B, gen_AB, adv_criterion)
+    adv_loss_BA, fake_A = get_gen_adversarial_loss(real_B, disc_A, gen_BA, adv_criterion)
+    gen_adversarial_loss = adv_loss_AB + adv_loss_BA
 
-    identity_loss_X, identity_X = get_identity_loss(real_X, gen_YX, identity_criterion)
-    identity_loss_Y, identity_Y = get_identity_loss(real_Y, gen_XY, identity_criterion)
-    gen_identity_loss = identity_loss_X + identity_loss_Y
+    cycle_loss_AB, cycle_B = get_cycle_consistency_loss(real_B, fake_A, gen_AB, cycle_criterion)
+    cycle_loss_BA, cycle_A = get_cycle_consistency_loss(real_A, fake_B, gen_BA, cycle_criterion)
+    gen_cycle_loss = cycle_loss_AB + cycle_loss_BA
 
-    cycle_loss_YX, cycle_X = get_cycle_consistency_loss(real_X, fake_Y, gen_YX, cycle_criterion)
-    cycle_loss_XY, cycle_Y = get_cycle_consistency_loss(real_Y, fake_X, gen_XY, cycle_criterion)
-    gen_cycle_loss = cycle_loss_YX + cycle_loss_XY
+    gen_loss = lambda_cycle * gen_cycle_loss + gen_adversarial_loss
+    
+    if use_identity:
+        identity_loss_A, identity_A = get_identity_loss(real_A, gen_BA, identity_criterion)
+        identity_loss_B, identity_B = get_identity_loss(real_B, gen_AB, identity_criterion)
+        gen_identity_loss = identity_loss_A + identity_loss_B
+        
+        gen_loss += lambda_identity * gen_identity_loss
 
-    gen_loss = lambda_identity * gen_identity_loss + lambda_cycle * gen_cycle_loss + gen_adversarial_loss
-    return gen_loss, fake_X, fake_Y
+    return gen_loss, fake_A, fake_B
