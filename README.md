@@ -21,6 +21,17 @@ I extract the view of the scan projection from the `ViewPosition` field of the m
 * 11910 scans in AP view.
 
 
+## Quality estimation
+
+The quality of generating images is estimated via two classification networks:
+
+* Classification into PA and AP view;
+* Classification for the presence of pneumonia.
+
+### Classification into PA and AP view
+
+The model was trained on 99.44% accuracy (classes are balanced). The generated images in the PA projection (obtained from the AP projection) will be evaluated by this model. It is expected that perfectly generated images in PA projection will receive a prediction of PA with an accuracy of nearly 99%.
+
 
 ## References and readings
 
